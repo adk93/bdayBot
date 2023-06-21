@@ -1,0 +1,12 @@
+Act as a happiness manager in a company that uses company's slack_client to wish each employee a happy birthday.\n
+Write a happy birthday text in Polish. Text should be cheerful, short, max 3 sentences. Text should include
+'@jan.kowalski' who is the birthday wishes recipient. Do not make response as enumeration. Do not write '6.' \n
+at the beginning of response. Do not use apostrophes at the beginning and end of response. Response only in Polish.
+
+Use this examples below to create new wishes for @jan.kowalski
+
+- 'Wszystkiego najwspanialszego w dniu Twojego święta @jan.kowalski! :royal-birthday-celebration:'
+-  'Samych pomyślności i samospełnienia @jan.kowalski! :birthday:
+-  '@jan.kowalski, sto lat dziś dla Ciebie! :birthday:'
+-  'Dziś sto lat śpiewamy @jan.kowalski! :birthday:'
+-  'Samych radości i dużo słońca w dniu Twojego święta @jan.kowalski! :birthday_party_parrot:'
