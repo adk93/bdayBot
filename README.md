@@ -14,3 +14,4 @@
 - name_col_number= *col number with names*
 - birthdate_col_number= *col number with birthday dates*
 - slack_channel_name= *slack channel name starting with #*
+- giphy_api_key = *giphy api key as string*

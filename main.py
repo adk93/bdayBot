@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 import msg_generator
 import slack_client
 import birthday_calendar
+import giphy_client
 
 load_dotenv()
 
@@ -49,7 +50,13 @@ def get_birthday_wishes() -> str:
 
 
 def process_birthday_wishes(birthday_user: str, birthday_wishes: str, placeholder: str = "@jan.kowalski"):
-    return birthday_wishes.replace(placeholder, birthday_user)
+    user_fit_birthday_wishes = birthday_wishes.replace(placeholder, birthday_user)
+
+    giphy_url = giphy_client.get_giphy_url()
+
+    final_birthday_wishes = f"{user_fit_birthday_wishes}\n{giphy_url}"
+
+    return final_birthday_wishes
 
 
 def main():
