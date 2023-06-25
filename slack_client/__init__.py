@@ -21,5 +21,5 @@ def post_message(channel: str, text: str) -> ['str', 'str']:
 
 
 def get_users():
-    print(slack.WebClient(token=SLACK_TOKEN).users_list())
+    return slack.WebClient(token=SLACK_TOKEN).users_list()
 

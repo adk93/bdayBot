@@ -11,7 +11,7 @@
 - src_spreadsheet_id= *google spreadsheet id*
 - sheet_name= *string google sheets sheet name*
 - range= *string google sheets range to download*
-- name_col_number= *col number with names*
+- id_col_number= *col number with ids*
 - birthdate_col_number= *col number with birthday dates*
 - slack_channel_name= *slack channel name starting with #*
 - giphy_api_key = *giphy api key as string*
