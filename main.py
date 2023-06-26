@@ -64,6 +64,13 @@ def get_birthday_wishes() -> str:
     return msg_generator.get_bday_wishes()
 
 
+def get_user_email_from_bigquery(uid: str):
+    query = f"SELECT uid, email FROM tpx-engineering.pub_tpx_data.users WHERE uid = '{uid}'"
+    data = bigquery_client.get_data(query)
+
+    return data.get("email")
+
+
 def get_slack_user_id_by_email(email: str) -> str | None:
     filtered_list = list(filter(lambda x: x.get("email") == email, slack_client.get_users()))
 
@@ -72,14 +79,7 @@ def get_slack_user_id_by_email(email: str) -> str | None:
     except IndexError as e:
         print(e)
         return None
-
-
-def get_user_email_from_bigquery(uid: str):
-    query = f"SELECT uid, email FROM tpx-engineering.pub_tpx_data.users WHERE uid = '{uid}'"
-    data = bigquery_client.get_data(query)
-
-    return data.get("email")
-
+pip
 
 def process_birthday_wishes(birthday_user_id: str, birthday_wishes: str, placeholder: str = "@jan.kowalski") -> str:
     """
