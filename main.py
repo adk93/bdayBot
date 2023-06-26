@@ -79,7 +79,7 @@ def get_slack_user_id_by_email(email: str) -> str | None:
     except IndexError as e:
         print(e)
         return None
-pip
+
 
 def process_birthday_wishes(birthday_user_id: str, birthday_wishes: str, placeholder: str = "@jan.kowalski") -> str:
     """
