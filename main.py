@@ -64,11 +64,12 @@ def get_birthday_wishes() -> str:
     return msg_generator.get_bday_wishes()
 
 
-def get_user_email_from_bigquery(uid: str):
+def get_user_email_from_bigquery(uid: str) -> str:
     query = f"SELECT uid, email FROM tpx-engineering.pub_tpx_data.users WHERE uid = '{uid}'"
     data = bigquery_client.get_data(query)
 
-    return data.get("email")
+    for row in data:
+        return row.get("email")
 
 
 def get_slack_user_id_by_email(email: str) -> str | None:
