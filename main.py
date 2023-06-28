@@ -25,6 +25,7 @@ RANGE = os.getenv("range")
 ID_COL_NUMBER = os.getenv("id_col_number")
 BIRTHDATE_COL_NUMBER = os.getenv("birthdate_col_number")
 SLACK_CHANNEL_NAME = os.getenv("slack_channel_name")
+SLACK_ADMIN_ID = os.getenv("slack_admin_id")
 
 
 def get_list_of_birthdays(sheet_name: str, range: str) -> List[List[str]]:
@@ -83,7 +84,7 @@ def get_slack_user_id_by_email(email: str) -> str | None:
     try:
         return filtered_list[0].get("id")
     except IndexError as e:
-        print(e)
+        logging.info(e)
         return None
 
 
@@ -98,7 +99,7 @@ def process_birthday_wishes(birthday_user_id: str, birthday_wishes: str, placeho
     """
 
     user_email = get_user_email_from_bigquery(birthday_user_id)
-    print(user_email)
+
     user_slack_id = get_slack_user_id_by_email(user_email)
 
     user_fit_birthday_wishes = birthday_wishes.replace(placeholder, f"<@{user_slack_id}>")
@@ -127,10 +128,9 @@ def main() -> None:
         logging.info(processed_wishes)
 
         if "@None" in processed_wishes:
-            time.sleep(45)
-            processed_wishes = process_birthday_wishes(user_id, birthday_wishes)
-            if "@None" in processed_wishes:
-                break
+            today_birthdays.append([user_id, ""])
+            slack_client.post_message(SLACK_ADMIN_ID, f"There was a problem with sending wishes to {user_id}")
+            continue
 
         slack_client.post_message(SLACK_CHANNEL_NAME, processed_wishes)
 

@@ -7,6 +7,7 @@
 **.env file**
 - OPENAI_API_KEY= *string key from openai*
 - SLACK_TOKEN= *string token from slack app*
+- slack_admin_id= *slack admin id. Someone who receives error messages*
 - service_account_json= *string json google serivce account*
 - src_spreadsheet_id= *google spreadsheet id*
 - sheet_name= *string google sheets sheet name*
