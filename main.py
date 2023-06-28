@@ -17,6 +17,8 @@ import bigquery_client
 
 load_dotenv()
 
+logging.basicConfig(level=logging.INFO)
+
 SRC_SPREADSHEET_ID = os.getenv("src_spreadsheet_id")
 SHEET_NAME = os.getenv("sheet_name")
 RANGE = os.getenv("range")
@@ -40,10 +42,11 @@ def get_list_of_birthdays(sheet_name: str, range: str) -> List[List[str]]:
     if list_of_employees[0][int(BIRTHDATE_COL_NUMBER)] == "Date of birth":
         for employee in list_of_employees:
             if employee[5] != "FORMER":
+                print(employee[5])
                 try:
                     list_of_birthdays.append([employee[int(ID_COL_NUMBER)], employee[int(BIRTHDATE_COL_NUMBER)]])
                 except IndexError as e:
-                    logging.debug(e)
+                    logging.info(e)
     else:
         logging.info(f"The expected column number {BIRTHDATE_COL_NUMBER} is not labeled as Date of birth")
 
@@ -56,7 +59,7 @@ def get_today_date() -> str:
 
 def get_today_birthdays(list_of_birthdays: [[str, str]]) -> [[str, str]]:
     today = get_today_date()
-    logging.debug(today)
+    logging.info(today)
     return list(filter(lambda x: x[1][4:] == today[4:], list_of_birthdays))
 
 
@@ -73,7 +76,9 @@ def get_user_email_from_bigquery(uid: str) -> str:
 
 
 def get_slack_user_id_by_email(email: str) -> str | None:
-    filtered_list = list(filter(lambda x: x.get("email") == email, slack_client.get_users()))
+    slack_users = slack_client.get_users()
+
+    filtered_list = list(filter(lambda x: x.get("profile", {}).get("email") == email, slack_users))
 
     try:
         return filtered_list[0].get("id")
@@ -93,6 +98,7 @@ def process_birthday_wishes(birthday_user_id: str, birthday_wishes: str, placeho
     """
 
     user_email = get_user_email_from_bigquery(birthday_user_id)
+    print(user_email)
     user_slack_id = get_slack_user_id_by_email(user_email)
 
     user_fit_birthday_wishes = birthday_wishes.replace(placeholder, f"<@{user_slack_id}>")
@@ -106,18 +112,19 @@ def process_birthday_wishes(birthday_user_id: str, birthday_wishes: str, placeho
 
 def main() -> None:
     list_of_birthdays = get_list_of_birthdays(SHEET_NAME, RANGE)
-    logging.debug(list_of_birthdays)
+    logging.info(list_of_birthdays)
 
     today_birthdays = get_today_birthdays(list_of_birthdays)
-    logging.debug(today_birthdays)
+    logging.info(today_birthdays)
 
     for today_birthday in today_birthdays:
         user_id = today_birthday[0]
-        logging.debug(f"User Birthday {user_id}")
+        logging.info(f"User Birthday {user_id}")
 
         birthday_wishes = get_birthday_wishes()
 
         processed_wishes = process_birthday_wishes(user_id, birthday_wishes)
+        logging.info(processed_wishes)
 
         slack_client.post_message(SLACK_CHANNEL_NAME, processed_wishes)
 

@@ -20,6 +20,6 @@ def post_message(channel: str, text: str) -> ['str', 'str']:
         return "Error", e
 
 
-def get_users():
-    return slack.WebClient(token=SLACK_TOKEN).users_list()
+def get_users() -> [{}]:
+    return slack.WebClient(token=SLACK_TOKEN).users_list()['members']
 
