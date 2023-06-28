@@ -126,6 +126,12 @@ def main() -> None:
         processed_wishes = process_birthday_wishes(user_id, birthday_wishes)
         logging.info(processed_wishes)
 
+        if "@None" in processed_wishes:
+            time.sleep(45)
+            processed_wishes = process_birthday_wishes(user_id, birthday_wishes)
+            if "@None" in processed_wishes:
+                break
+
         slack_client.post_message(SLACK_CHANNEL_NAME, processed_wishes)
 
         time.sleep(5)
