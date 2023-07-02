@@ -7,6 +7,7 @@ import logging
 
 # Third party  imports
 from dotenv import load_dotenv
+import backoff
 
 # Local app imports
 import msg_generator
@@ -21,35 +22,58 @@ logging.basicConfig(level=logging.INFO)
 
 SRC_SPREADSHEET_ID = os.getenv("src_spreadsheet_id")
 SHEET_NAME = os.getenv("sheet_name")
-RANGE = os.getenv("range")
-ID_COL_NUMBER = os.getenv("id_col_number")
-BIRTHDATE_COL_NUMBER = os.getenv("birthdate_col_number")
+RANGE_VALUE = os.getenv("range")
+ID_COL_NUMBER = int(os.getenv("id_col_number"))
+BIRTHDATE_COL_NUMBER = int(os.getenv("birthdate_col_number"))
 SLACK_CHANNEL_NAME = os.getenv("slack_channel_name")
 SLACK_ADMIN_ID = os.getenv("slack_admin_id")
+EMPL_STATUS_COL_NUMBER = int(os.getenv("empl_status_col_number"))
 
 
-def get_list_of_birthdays(sheet_name: str, range: str) -> List[List[str]]:
+def inform_admin(e) -> None:
+    logging.info(e)
+    logging.info("messaging admin")
+    slack_client.post_message(SLACK_ADMIN_ID, e)
+    raise Exception
+
+
+@backoff.on_exception(backoff.expo, Exception, max_tries=5, giveup=inform_admin)
+def get_list_of_employees(sheet_name: str, range_value: str) -> List[List[str]]:
+    sheet = birthday_calendar.Gsheets(SRC_SPREADSHEET_ID)
+    return sheet.get_data_from_sheet(sheet_name, range_value)
+
+
+def get_list_of_birthdays(sheet_name: str, range_value: str) -> List[List[str]]:
     """
     Function gets list of employees data from the spreadsheet 'LIST OF EMPLOYEES'
     :param sheet_name: The sheet name containing user table
-    :param range: Range of data to import
+    :param range_value: Range of data to import
     :return: List containing user_id and a birthdate
     """
 
-    sheet = birthday_calendar.Gsheets(SRC_SPREADSHEET_ID)
-    list_of_employees = sheet.get_data_from_sheet(sheet_name, range)
+    list_of_employees = get_list_of_employees(sheet_name, range_value)
+    headers = list_of_employees[0]
 
+    # Checks
+    if headers[BIRTHDATE_COL_NUMBER] != "Date of birth":
+        error_msg = f"The expected column number {BIRTHDATE_COL_NUMBER} is not labeled as Date of birth"
+        inform_admin(error_msg)
+        raise Exception
+
+    if headers[EMPL_STATUS_COL_NUMBER] != "status":
+        error_msg = f"status column number {EMPL_STATUS_COL_NUMBER} apparently moved"
+        inform_admin(error_msg)
+        raise Exception
+
+    # Extracting active employees
     list_of_birthdays = []
-    if list_of_employees[0][int(BIRTHDATE_COL_NUMBER)] == "Date of birth":
-        for employee in list_of_employees:
-            if employee[5] != "FORMER":
-                print(employee[5])
-                try:
-                    list_of_birthdays.append([employee[int(ID_COL_NUMBER)], employee[int(BIRTHDATE_COL_NUMBER)]])
-                except IndexError as e:
-                    logging.info(e)
-    else:
-        logging.info(f"The expected column number {BIRTHDATE_COL_NUMBER} is not labeled as Date of birth")
+    for employee in list_of_employees:
+        if employee[EMPL_STATUS_COL_NUMBER] != "FORMER":
+            logging.info(f"Employee id: {employee[ID_COL_NUMBER]} has a status {employee[EMPL_STATUS_COL_NUMBER]}")
+            try:
+                list_of_birthdays.append([employee[ID_COL_NUMBER], employee[BIRTHDATE_COL_NUMBER]])
+            except IndexError as e:
+                logging.info(e)
 
     return list_of_birthdays
 
@@ -68,6 +92,7 @@ def get_birthday_wishes() -> str:
     return msg_generator.get_bday_wishes()
 
 
+@backoff.on_exception(backoff.expo, IndexError, max_tries=5, giveup=inform_admin)
 def get_user_email_from_bigquery(uid: str) -> str:
     query = f"SELECT uid, email FROM tpx-engineering.pub_tpx_data.users WHERE uid = '{uid}'"
     data = bigquery_client.get_data(query)
@@ -76,16 +101,14 @@ def get_user_email_from_bigquery(uid: str) -> str:
         return row.get("email")
 
 
+@backoff.on_exception(backoff.expo, IndexError, max_tries=5, giveup=inform_admin)
 def get_slack_user_id_by_email(email: str) -> str | None:
+
     slack_users = slack_client.get_users()
 
     filtered_list = list(filter(lambda x: x.get("profile", {}).get("email") == email, slack_users))
 
-    try:
-        return filtered_list[0].get("id")
-    except IndexError as e:
-        logging.info(e)
-        return None
+    return filtered_list[0].get("id")
 
 
 def process_birthday_wishes(birthday_user_id: str, birthday_wishes: str, placeholder: str = "@jan.kowalski") -> str:
@@ -100,7 +123,15 @@ def process_birthday_wishes(birthday_user_id: str, birthday_wishes: str, placeho
 
     user_email = get_user_email_from_bigquery(birthday_user_id)
 
+    if not user_email:
+        inform_admin(f"Problem with user email")
+        raise Exception
+
     user_slack_id = get_slack_user_id_by_email(user_email)
+
+    if not user_slack_id:
+        inform_admin("problem with user slack id")
+        raise Exception
 
     user_fit_birthday_wishes = birthday_wishes.replace(placeholder, f"<@{user_slack_id}>")
 
@@ -112,7 +143,7 @@ def process_birthday_wishes(birthday_user_id: str, birthday_wishes: str, placeho
 
 
 def main() -> None:
-    list_of_birthdays = get_list_of_birthdays(SHEET_NAME, RANGE)
+    list_of_birthdays = get_list_of_birthdays(SHEET_NAME, RANGE_VALUE)
     logging.info(list_of_birthdays)
 
     today_birthdays = get_today_birthdays(list_of_birthdays)
@@ -126,11 +157,6 @@ def main() -> None:
 
         processed_wishes = process_birthday_wishes(user_id, birthday_wishes)
         logging.info(processed_wishes)
-
-        if "@None" in processed_wishes:
-            today_birthdays.append([user_id, ""])
-            slack_client.post_message(SLACK_ADMIN_ID, f"There was a problem with sending wishes to {user_id}")
-            continue
 
         slack_client.post_message(SLACK_CHANNEL_NAME, processed_wishes)
 
