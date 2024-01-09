@@ -29,7 +29,7 @@ with open(os.path.join('msg_generator', "prompt.txt")) as text:
 
 def get_bday_wishes() -> str:
     response = openai.Completion.create(
-        model="text-davinci-003",
+        model="gpt-3.5-turbo-1106",
         prompt=PROMPT,
         temperature=0.8,
         max_tokens=128,
