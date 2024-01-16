@@ -2,12 +2,12 @@
 import os
 
 # Third party  imports
-import openai
+from openai import OpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # prompt = """
 # Act as a happiness manager in a company that uses company's slack_client to wish each employee a happy birthday.\n
@@ -28,14 +28,14 @@ with open(os.path.join('msg_generator', "prompt.txt")) as text:
 
 
 def get_bday_wishes() -> str:
-    response = openai.Completion.create(
-        model="gpt-3.5-turbo-1106",
-        prompt=PROMPT,
-        temperature=0.8,
-        max_tokens=128,
-        top_p=1.0,
-        frequency_penalty=0.0,
-        presence_penalty=0.0
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {
+                "role": "user",
+                "content": PROMPT
+            }
+        ]
     )
 
-    return response.get('choices')[0].get('text')
+    return response.choices[0].message.content
